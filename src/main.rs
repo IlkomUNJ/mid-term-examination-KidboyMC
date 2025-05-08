@@ -7,11 +7,13 @@ use crate::structure::tree::NodeLink;
 use crate::structure::bst::BstNodeLink;
 use crate::tool::generate_dotfile;
 use crate::tool::generate_dotfile_bst;
+use structure::btree::{BTreeNode, BTreeNodeLink};
 
 fn main() {
     //turn on to test the old code
     // test_binary_tree();
     test_binary_search_tree();
+    test_btree();
 }
 
 fn test_binary_search_tree(){
@@ -125,6 +127,61 @@ fn test_binary_search_tree(){
         let rootalter = BstNode::tree_delete(&rootlink2.as_ref().unwrap());
         generate_dotfile_bst(&rootalter, "bst_delete_root.dot");
     }
+
+    fn test_additional_bst_operations(rootlink: &BstNodeLink) {
+        // Test add_node (adds to node if found)
+        println!("\nTesting add_node:");
+        if let Some(target_node) = rootlink.borrow().tree_search(&13) {
+            let result = rootlink.borrow().add_node(&target_node, 11);
+            println!("Added node 11 under 13: {}", result);
+        }
+    
+        // Re-print the tree to verify
+        generate_dotfile_bst(rootlink, "bst_add_node.dot");
+    
+        // Test tree_predecessor
+        println!("\nTesting tree_predecessor:");
+        if let Some(node) = rootlink.borrow().tree_search(&13) {
+            if let Some(pred) = BstNode::tree_predecessor(&node) {
+                println!("Predecessor of 13 is {:?}", pred.borrow().key);
+            } else {
+                println!("No predecessor for 13");
+            }
+        }
+    
+        if let Some(node) = rootlink.borrow().tree_search(&2) {
+            if let Some(pred) = BstNode::tree_predecessor(&node) {
+                println!("Predecessor of 2 is {:?}", pred.borrow().key);
+            } else {
+                println!("No predecessor for 2 (it's the min)");
+            }
+        }
+    
+        // Test median
+        println!("\nTesting median:");
+        let median_node = rootlink.borrow().median();
+        println!("Median node key is {:?}", median_node.borrow().key);
+    
+        // Test tree_rebalance
+        println!("\nTesting tree_rebalance:");
+        let rebalanced_tree = BstNode::tree_rebalance(rootlink);
+        generate_dotfile_bst(&rebalanced_tree, "bst_rebalanced.dot");
+    
+        println!("Rebalanced tree root: {:?}", rebalanced_tree.borrow().key);
+    }
+    test_additional_bst_operations(&rootlink);
+}
+
+fn test_btree(){
+    let root = BTreeNode::new();
+    let data = vec![1234, 1235, 1224, 1311, 2124];
+
+    for &val in &data {
+        BTreeNode::insert(&root, val);
+    }
+
+    assert!(BTreeNode::lookup(&root, vec![1, 3, 1, 1])); // 1311 -> true
+    assert!(BTreeNode::lookup(&root, vec![1, 3, 1, 2])); // 1312 -> true
 }
 
 fn test_index(){
