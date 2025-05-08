@@ -352,4 +352,123 @@ impl BstNode {
             Some(x) => Some(x.upgrade().unwrap()),
         }
     }
+
+    // Find target_node in the current tree, and adds a new node as a child of that node
+    pub fn add_node(&self, target_node: &BstNodeLink, value: i32) -> bool {
+        if let Some(found_node) = self.tree_search(&target_node.borrow().key.unwrap()) {
+            let mut found = found_node.borrow_mut();
+    
+            // Insert the value using existing tree_insert logic under this node
+            if value < found.key.unwrap() {
+                if found.left.is_none() {
+                    found.add_left_child(&found_node, value);
+                    return true;
+                }
+            } else {
+                if found.right.is_none() {
+                    found.add_right_child(&found_node, value);
+                    return true;
+                }
+            }
+        }
+        false
+    }
+    
+    // Find the largest node smaller than the current node
+    pub fn tree_predecessor(x_node: &BstNodeLink) -> Option<BstNodeLink> {
+        if let Some(left_node) = &x_node.borrow().left {
+            return Some(left_node.borrow().maximum());
+        }
+    
+        let mut x_node = x_node.clone();
+        let mut y_node = BstNode::upgrade_weak_to_strong(x_node.borrow().parent.clone());
+    
+        while let Some(y) = y_node.clone() {
+            if let Some(right_child) = &y.borrow().right {
+                if BstNode::is_node_match(right_child, &x_node) {
+                    return Some(y.clone());
+                }
+            }
+            x_node = y;
+            y_node = BstNode::upgrade_weak_to_strong(x_node.borrow().parent.clone());
+        }
+    
+        None
+    } 
+    
+    // Do an in-order traversal and stop at the n/2-th element
+    fn count_nodes(&self) -> usize {
+        let mut count = 1;
+        if let Some(left) = &self.left {
+            count += left.borrow().count_nodes();
+        }
+        if let Some(right) = &self.right {
+            count += right.borrow().count_nodes();
+        }
+        count
+    }
+    
+    fn find_nth_inorder(&self, n: usize, counter: &mut usize) -> Option<BstNodeLink> {
+        if let Some(left) = &self.left {
+            if let Some(node) = left.borrow().find_nth_inorder(n, counter) {
+                return Some(node);
+            }
+        }
+    
+        if *counter == n {
+            return Some(self.get_bst_nodelink_copy());
+        }
+        *counter += 1;
+    
+        if let Some(right) = &self.right {
+            if let Some(node) = right.borrow().find_nth_inorder(n, counter) {
+                return Some(node);
+            }
+        }
+    
+        None
+    }
+    
+    pub fn median(&self) -> BstNodeLink {
+        let total_nodes = self.count_nodes();
+        let target = total_nodes / 2;
+        let mut counter = 0;
+        self.find_nth_inorder(target, &mut counter).unwrap()
+    
+    }
+
+    // Use an in-order traversal to collect node values into a linked list/tree, and rebuild the tree recursively by selecting the median node as the root at each step
+    fn inorder_collect(node: &Option<BstNodeLink>, list: &mut Vec<BstNodeLink>) {
+        if let Some(n) = node {
+            Self::inorder_collect(&n.borrow().left, list);
+            list.push(n.clone());
+            Self::inorder_collect(&n.borrow().right, list);
+        }
+    }
+    
+    fn build_balanced_bst(nodes: &[BstNodeLink], parent: Option<&BstNodeLink>) -> Option<BstNodeLink> {
+        if nodes.is_empty() {
+            return None;
+        }
+        let mid = nodes.len() / 2;
+        let root = nodes[mid].borrow().key.unwrap();
+        let new_root = BstNode::new_bst_nodelink(root);
+    
+        if let Some(p) = parent {
+            new_root.borrow_mut().parent = Some(Rc::downgrade(p));
+        }
+    
+        let left = Self::build_balanced_bst(&nodes[..mid], Some(&new_root));
+        let right = Self::build_balanced_bst(&nodes[mid + 1..], Some(&new_root));
+        new_root.borrow_mut().left = left;
+        new_root.borrow_mut().right = right;
+    
+        Some(new_root)
+    }
+    
+    pub fn tree_rebalance(node: &BstNodeLink) -> BstNodeLink {
+        let mut nodes = Vec::new();
+        BstNode::inorder_collect(&Some(node.clone()), &mut nodes);
+        BstNode::build_balanced_bst(&nodes, None).unwrap()
+    }
 }

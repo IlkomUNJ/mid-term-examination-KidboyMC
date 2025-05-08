@@ -1,4 +1,5 @@
 pub mod bst;
+pub mod btree;
 pub mod tree {
     use std::cell::RefCell;
     use std::rc::{Rc, Weak};
